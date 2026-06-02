@@ -1,0 +1,31 @@
+[build-system]
+requires = ["meson-python", "nanobind"]
+build-backend = "mesonpy"
+
+[project]
+name = "supertokens"
+version = "0.1.0"
+description = "Fast BPE tokenizer with C++ backend"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["tokenizer", "bpe", "nlp", "llm"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: C++",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourname/shatokens"
+Repository = "https://github.com/yourname/shatokens"
+Issues = "https://github.com/yourname/shatokens"
+
+[tool.meson-python.args]
+setup = ['--vsenv']   
+

@@ -1,0 +1,20 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+wheelhouse/
+__pycache__/
+*.pyc
+
+# Compiled extensions — NEVER commit these
+*.so
+*.pyd
+*.dll
+
+# Meson
+.mesonpy/
+subprojects/nanobind-*/    # downloaded by meson, not committed
+subprojects/robin-map-*/
+
+# ccche
+.cache/
