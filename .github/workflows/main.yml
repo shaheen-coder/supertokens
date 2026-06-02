@@ -41,12 +41,6 @@ jobs:
             runner: ubuntu-22.04
             cibw_archs: x86_64
 
-          # ── macOS x86_64 (Intel) ────────────────────────────────────────────
-          - os: macOS
-            arch: x86_64
-            runner: macos-13
-            cibw_archs: x86_64
-            macos_target: "10.15"
 
           # ── macOS arm64 (Apple Silicon) ──────────────────────────────────────
           - os: macOS

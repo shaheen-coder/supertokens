@@ -28,7 +28,13 @@
 #include <algorithm>
 #include <limits>
 #include <iterator>
-#include <sys/select.h>
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <windows.h>
+#else
+  #include <sys/select.h>
+#endif
+
 // files
 
 #include <fstream>
