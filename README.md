@@ -4,9 +4,16 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/supertokens.svg)](https://pypi.org/project/supertokens/)
 [![Python](https://img.shields.io/pypi/pyversions/supertokens.svg)](https://pypi.org/project/supertokens/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/supertokens.svg)](https://pypi.org/project/supertokens/)
+[![C++](https://img.shields.io/badge/C%2B%2B-20-blue.svg)](https://isocpp.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Build](https://img.shields.io/github/actions/workflow/status/yourorg/supertokens/ci.yml?branch=main)](https://github.com/yourorg/supertokens/actions)
+[![Build](https://img.shields.io/github/actions/workflow/status/shaheen-coder/supertokens/main.yml?branch=main&label=build)](https://github.com/yourorg/supertokens/actions)
 
+![Linux](https://img.shields.io/badge/Linux-Supported-FCC624?logo=linux&logoColor=black)
+
+![macOS](https://img.shields.io/badge/macOS-Supported-000000?logo=apple)
+
+![Windows](https://img.shields.io/badge/Windows-Supported-0078D6?logo=windows)
 ---
 
 ## ✨ Features
