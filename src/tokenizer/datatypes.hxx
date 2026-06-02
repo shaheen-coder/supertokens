@@ -62,7 +62,7 @@ struct Node {
     ui16 id;
     int prev ; int next ;
 };
-constexpr ui16 DEAD = std::numeric_limits<ui16>::max();
+constexpr ui16 DEAD = (std::numeric_limits<ui16>::max)();
 inline bool is_alive(const Node& n) { return n.id != DEAD; }
 inline void kill(Node& n) { n.id = DEAD; }
 

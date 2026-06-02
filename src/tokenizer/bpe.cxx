@@ -29,6 +29,7 @@
 #include <limits>
 #include <iterator>
 #ifdef _WIN32
+  #define NOMINMAX
   #include <winsock2.h>
   #include <windows.h>
 #else
@@ -236,7 +237,7 @@ auto BPE::train(PreTokens& tokens) -> void {
             if (prev_node != -1) {
                 Pair old_prev_pair = make_pair_key(nodes[prev_node].id, pair_hi(best_pair));
                 if (auto it_old = pairs.find(old_prev_pair); it_old != pairs.end()) {
-                    it_old->second.count = std::max(0, it_old->second.count - 1);
+                    it_old->second.count = (std::max)(0, it_old->second.count - 1);
                 }
 
                 Pair new_prev_pair = make_pair_key(nodes[prev_node].id, new_id);
@@ -256,7 +257,7 @@ auto BPE::train(PreTokens& tokens) -> void {
             if (after != -1) {
                 Pair old_after_pair = make_pair_key(pair_lw(best_pair), nodes[after].id);
                 if (auto it_old = pairs.find(old_after_pair); it_old != pairs.end()) {
-                    it_old->second.count = std::max(0, it_old->second.count - 1);
+                    it_old->second.count = (std::max)(0, it_old->second.count - 1);
                 }
 
                 Pair new_after_pair = make_pair_key(new_id, nodes[after].id);

@@ -1,6 +1,7 @@
 cpp_args = [
   '-DUTF_CPP_CPLUSPLUS=202002L',
   '-O3',
+  '-DNOMINMAX',
   '-march=native',
   '-mtune=native',
   '-DNDEBUG',
