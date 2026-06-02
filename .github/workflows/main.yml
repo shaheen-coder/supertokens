@@ -1,0 +1,231 @@
+# .github/workflows/build_wheels.yml
+#
+# Builds CPython 3.13 wheels for:
+#   - Linux   x86_64  (manylinux_2_28)
+#   - macOS   x86_64  (10.15+)
+#   - macOS   arm64   (Apple Silicon)
+#   - Windows x86_64
+#
+# Then pushes to PyPI via Trusted Publishing (OIDC – no token secret needed).
+# Set up once at https://pypi.org/manage/account/publishing/
+
+name: Build & Publish Wheels
+
+on:
+  push:
+    tags:
+      - "v*.*.*"          # trigger only on version tags, e.g. v0.1.0
+  workflow_dispatch:       # allow manual runs from the Actions tab
+
+# ---------------------------------------------------------------------------
+# Permissions required for PyPI Trusted Publishing (OIDC)
+# ---------------------------------------------------------------------------
+permissions:
+  id-token: write
+  contents: read
+
+# ---------------------------------------------------------------------------
+# Shared env vars
+# ---------------------------------------------------------------------------
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  # =========================================================================
+  # BUILD WHEELS
+  # =========================================================================
+  build_wheels:
+    name: ${{ matrix.os }} – ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── Linux x86_64 ──────────────────────────────────────────────────
+          - os: Linux
+            arch: x86_64
+            runner: ubuntu-22.04
+            cibw_platform: linux
+            cibw_archs: x86_64
+
+          # ── macOS x86_64 ──────────────────────────────────────────────────
+          - os: macOS
+            arch: x86_64
+            runner: macos-13          # Intel runner
+            cibw_platform: macos
+            cibw_archs: x86_64
+            macos_target: "10.15"
+
+          # ── macOS arm64 ───────────────────────────────────────────────────
+          - os: macOS
+            arch: arm64
+            runner: macos-14          # Apple Silicon runner
+            cibw_platform: macos
+            cibw_archs: arm64
+            macos_target: "11.0"
+
+          # ── Windows x86_64 ────────────────────────────────────────────────
+          - os: Windows
+            arch: x86_64
+            runner: windows-2022
+            cibw_platform: windows
+            cibw_archs: AMD64
+
+    steps:
+      # ── 1. Checkout ───────────────────────────────────────────────────────
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive   # pull nanobind / robin-map submodules
+
+      # ── 2. Python (host, for cibuildwheel itself) ─────────────────────────
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # ── 3. Platform-specific pre-reqs ─────────────────────────────────────
+
+      # Linux: nothing extra – manylinux container already has gcc/ninja
+      # macOS: make sure Meson & Ninja are available on the host too
+      - name: Install Meson & Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: pip install meson ninja
+
+      # Windows: install build tools via pip; MSVC is already on the runner
+      - name: Install Meson & Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: pip install meson ninja
+
+      # ── 4. Build wheels via cibuildwheel ──────────────────────────────────
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.19.2
+        env:
+          # ── Target only CPython 3.13 ──────────────────────────────────────
+          CIBW_BUILD: "cp313-*"
+          CIBW_SKIP:  "*-musllinux_*"   # skip musl; use glibc manylinux only
+
+          # ── Architecture ──────────────────────────────────────────────────
+          CIBW_ARCHS: ${{ matrix.cibw_archs }}
+
+          # ── Linux: use manylinux_2_28 (glibc 2.28+, ~RHEL 8) ─────────────
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_2_28_x86_64
+
+          # ── Linux: install Meson + Ninja inside the manylinux container ───
+          CIBW_BEFORE_ALL_LINUX: |
+            pip install meson ninja
+            # Wrap files land in subprojects/; ensure they are present
+            ls subprojects/
+
+          # ── macOS deployment target ───────────────────────────────────────
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_target || '' }}
+
+          # ── macOS: -march=native is unsafe for universal/cross builds;
+          #    override cpp_args to drop it while keeping the other opts ──────
+          CIBW_BEFORE_ALL_MACOS: |
+            pip install meson ninja
+
+          # ── Windows: set up MSVC env via vcvarsall ────────────────────────
+          CIBW_BEFORE_ALL_WINDOWS: |
+            pip install meson ninja
+
+          # ── Build command (same for all platforms) ────────────────────────
+          # cibuildwheel calls `pip wheel .` which invokes the PEP-517 backend
+          # defined in pyproject.toml (mesonpy).  Nothing special needed here.
+
+          # ── Per-platform compiler flags ───────────────────────────────────
+          # Drop -march=native on macOS/Windows cross-build scenarios.
+          # On Linux x86_64 native build it is safe.
+          CIBW_ENVIRONMENT_MACOS: >
+            CFLAGS="-O3 -DNDEBUG"
+            CXXFLAGS="-O3 -DNDEBUG -std=c++20"
+
+          CIBW_ENVIRONMENT_WINDOWS: >
+            CFLAGS="/O2 /DNDEBUG"
+            CXXFLAGS="/O2 /DNDEBUG /std:c++20"
+
+          # ── Repair wheels ─────────────────────────────────────────────────
+          # auditwheel (Linux) and delocate (macOS) run automatically.
+          # On Windows the runner is already clean.
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            auditwheel repair -w {dest_dir} {wheel}
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}
+
+          # ── Smoke-test the installed wheel ────────────────────────────────
+          CIBW_TEST_COMMAND: >
+            python -c "import supertokens; print('supertokens import OK')"
+
+          # ── Verbose build output (handy for CI debugging) ─────────────────
+          CIBW_BUILD_VERBOSITY: 1
+
+        with:
+          output-dir: dist/
+
+      # ── 5. Upload built wheels as CI artifacts ────────────────────────────
+      - name: Upload wheel artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.arch }}
+          path: dist/*.whl
+          if-no-files-found: error
+
+  # =========================================================================
+  # BUILD SOURCE DISTRIBUTION (sdist) – Linux runner is enough
+  # =========================================================================
+  build_sdist:
+    name: Build sdist
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install build frontend
+        run: pip install build meson ninja
+
+      - name: Build sdist
+        run: python -m build --sdist --outdir dist/
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  # =========================================================================
+  # PUBLISH TO PyPI  (runs only after ALL build jobs succeed)
+  # =========================================================================
+  publish:
+    name: Publish to PyPI
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-22.04
+
+    # Trusted Publishing environment – create this in your PyPI project settings
+    environment:
+      name: pypi
+      url: https://pypi.org/p/supertokens
+
+    steps:
+      # ── Collect all wheels + sdist into one directory ─────────────────────
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true   # flatten into dist/ (no sub-folders)
+
+      - name: List dist contents
+        run: ls -lh dist/
+
+      # ── Publish via OIDC Trusted Publishing (no PYPI_TOKEN secret needed) ─
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
+          # Uncomment the line below to test against TestPyPI first:
+          # repository-url: https://test.pypi.org/legacy/
