@@ -9,7 +9,8 @@
 
 // custom uitls
 #include "tokenizer/datatypes.hxx"
-
+#include <vector>
+#include <fstream>
 
 
 auto build_pairs(Pairs& pairs,const std::vector<int>& heads, const Nodes& nodes,flat_vector& position) -> void ;
