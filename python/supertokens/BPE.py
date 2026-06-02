@@ -1,6 +1,6 @@
-from shatokens_api import BPE
+from .shatokens_api import BPE
 
-from model import Model
+from .model import Model
 
 
 class BpeTrainer(BPE):
